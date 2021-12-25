@@ -78,7 +78,7 @@ static inline void bt_make(word_t *bt, size_t size, bt_flags flags) {
     //ustawiam header
     *bt = size | flags;
     //ustawian footer
-    *bt = bt_footer(bt);
+     bt = bt_footer(bt);
     *bt = size | flags;
 }
 
@@ -115,7 +115,39 @@ static inline word_t *prev_fb(word_t *bt) {
         return NULL;
     return heap_start + offset ;
 }
+void print_memory()
+{
+  printf("printed debug info");
+  if(heap_start == NULL)
+  {
+    printf("empty memory");
+    return;
+  }
+  word_t *block = heap_start;
+ 
+  word_t size;
+  int free;
+  int index_next;
+  int index_prev;
+  printf("heap start: %ls\t, heap end: %ls\n", heap_start, heap_end);
+  while(block!=heap_end)
+  {
+    size = bt_size(block);
+    free = bt_free(block);
+    if(free)
+    {
+      index_prev= *(block + 1);
+      index_next = *(block + 2);
+      printf("F: %d, %d, %d\n", size, index_prev, index_next);
+    }
+    else{
+      printf("Z: %d\n", size);
+    }
+    block = block + (size /4);
+    
 
+  }
+}
 static inline void set_new_fb(word_t *bt, word_t *next)
 {
    word_t *prev = prev_fb(next); 
@@ -135,11 +167,13 @@ static inline void set_new_fb(word_t *bt, word_t *next)
 static inline void add_new_fb(word_t *bt)
 {
   
+  
     if(free_blocks == NULL)
     {
        set_next_fb(bt, -1);
        set_prev_fb(bt, -1);
        free_blocks = bt;
+       printf("ijk %d", *free_blocks);
        return;
     }
     else{
@@ -151,7 +185,7 @@ static inline void add_new_fb(word_t *bt)
         {
             if(size <= listed_block_size)
             {
-                set_new_bt(bt, block);
+                set_new_fb(bt, block);
                 return;
             }
             block = next_block;
@@ -169,6 +203,7 @@ static inline void remove_fb(word_t *bt)
 {
   word_t *prev = prev_fb(bt);
   word_t *next = next_fb(bt);
+  //*bt = *bt | USED;
   //został tylko jeden blok na liście
   if(prev == NULL && next == NULL)
   {
@@ -202,26 +237,34 @@ static inline word_t *coalasce(word_t *bt)
   word_t next_free;
   word_t prev_free;
   word_t size;
-  if(bt != heap_start)
+  if(bt != heap_start )
   {
-    prev = bt - bt_size(bt - 1);
+    printf("a");
+    prev = bt - (bt_size(bt - 1)/4);
+    printf("a");
     prev_free = bt_free(prev);
+    printf("a");
   }
   else
   {
+    printf("b");
     prev_free = 0;
   }
   if(bt != last)
   {
-    next = bt + bt_size(bt);
+    printf("c");
+    next = bt + (bt_size(bt)/4);
     next_free = bt_free(next);
+    printf("\nbtfree: %d\n", next_free);
   }
   else{
+    printf("d");
     next_free = 0;
   }
   //okalające bloki są wolne
   if(next_free && prev_free)
   {
+    printf("e");
     remove_fb(prev);
     remove_fb(next);
     size = bt_size(prev) + bt_size(bt) + bt_size(next);
@@ -232,6 +275,7 @@ static inline word_t *coalasce(word_t *bt)
   //poprzedni blok jest wolny
   else if(prev_free && !next_free)
   {
+    printf("f");
     remove_fb(prev);
     size = bt_size(prev) + bt_size(bt);
     bt = prev;
@@ -241,16 +285,22 @@ static inline word_t *coalasce(word_t *bt)
   //następny blok jest wolny
   else if(!prev_free && next_free)
   {
+    printf("g");
+    print_memory();
     remove_fb(next);
+    printf("g");
     size = bt_size(bt) + bt_size(next);
     bt_make(bt, size, FREE);
     add_new_fb(bt);
   }
   //bloki z przodu i tyłu są zajęte
   else{
+    printf("h");
     size = bt_size(bt);
     bt_make(bt, size, FREE);
     add_new_fb(bt);
+
+    //printf("%ls", free_blocks);
 
   }
   return bt;
@@ -297,16 +347,19 @@ int mm_init(void) {
 /* Best fit startegy. */
 static word_t *find_fit(size_t reqsz) {
   word_t *fb = free_blocks;
-  size_t size = bt_size(fb);
+  size_t size = bt_size(fb)- 2*sizeof(word_t);
   while(fb != NULL)
   {
-    if(reqsz>=size)
+    if(reqsz<=size)
     {
+      printf("%ld\t %ld", reqsz, size);
+      remove_fb(fb);
       return fb;
     }
     fb = next_fb(fb);
-    size = bt_size(fb);
+    size = bt_size(fb)- 2*sizeof(word_t);;
   }
+  printf("tu mial byc");
   return NULL;
 
 }
@@ -315,16 +368,24 @@ static word_t *find_fit(size_t reqsz) {
    Funkcja malloc jest zainspirowana kodem z książki CS:APP to znaczy, 
    że inspirowałem się stworzonym tam algorytmem i adoptowałem go
    do moich potrzeb.
+
+
+   NIe złącza ostatniego wolnego bloku!!!!
    
 */
-void *malloc(size_t size) {
+int i = 0;
+void *mm_malloc(size_t size) {
+  i++;
+  if(free_blocks!= NULL)
+    printf("\nmalloc %ld free_block_size:%d\n",size,  *free_blocks);
+  else
+    printf("\nmalloc %ld\n", size);
   if(size == 0)
   {
     return NULL;
   }
   size = normalize_size(size);
   size_t blocks = size / 4;
-
   word_t *new_block;
   if(free_blocks == NULL)
   {
@@ -345,6 +406,10 @@ void *malloc(size_t size) {
       last = new_block;
       heap_end = new_block + blocks;
     }
+    else
+    {
+      printf("rozmiae bloku %d", *new_block);
+    }
   }
   bt_make(new_block, size, USED);
   new_block = bt_payload(new_block);
@@ -355,25 +420,29 @@ void *malloc(size_t size) {
 /* --=[ free ]=-------------------------------------------------------------
     implementacj na podstawie  */
 
-void free(void *ptr) {
+void mm_free(void *ptr) {
+  printf("free");
   if(ptr != NULL)
   {
     word_t *bt = bt_fromptr(ptr);//dostaniemy bt
    // size_t size = get_size(bt);
    //bt_make(bt, size, FREE);
-    bt = coalesce(bt);
+    bt = coalasce(bt);
   }
 
 }
 
 /* --=[ realloc ]=---------------------------------------------------------- */
 
-void *realloc(void *old_ptr, size_t size) {
+void *mm_realloc(void *old_ptr, size_t size) {
+  printf("realloc");
+  return NULL;
 }
 
 /* --=[ calloc ]=----------------------------------------------------------- */
 
-void *calloc(size_t nmemb, size_t size) {
+void *mm_calloc(size_t nmemb, size_t size) {
+  printf("calloc");
   size_t bytes = nmemb * size;
   void *new_ptr = malloc(bytes);
   if (new_ptr)
@@ -381,10 +450,6 @@ void *calloc(size_t nmemb, size_t size) {
   return new_ptr;
 }
 
-/* --=[ mm_checkheap ]=----------------------------------------------------- */
-
-void mm_checkheap(int verbose) {
-}
 /* --=[ mm_checkheap ]=----------------------------------------------------- */
 
 void mm_checkheap(int verbose) {
