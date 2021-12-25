@@ -105,7 +105,7 @@ static inline void set_prev_fb(word_t *bt, word_t offset)
 /* zwraca null lub wskaźnik na następny blok pamięci */
 static inline word_t *next_fb(word_t *bt) {
     word_t offset = *(bt + 2);
-    if(offset == 0)
+    if(offset == -1)
         return NULL;
     return heap_start + offset ;
 }
@@ -113,7 +113,7 @@ static inline word_t *next_fb(word_t *bt) {
 /* zwraca null lub wskaźnik na poprzedni blok pamięci */
 static inline word_t *prev_fb(word_t *bt) {
     word_t offset = *(bt + 1);
-    if(offset == 0)
+    if(offset == -1)
         return NULL;
     return heap_start + offset ;
 }
@@ -124,7 +124,7 @@ static inline void set_new_fb(word_t *bt, word_t *next)
   if(prev == NULL)
   {
     free_blocks = bt;
-    set_prev_fb(bt, 0);
+    set_prev_fb(bt, -1);
   }
   else{
     set_next_fb(prev, bt - heap_start);
@@ -139,8 +139,8 @@ static inline void add_new_fb(word_t *bt)
   
     if(free_blocks == NULL)
     {
-       set_next_fb(bt, 0);
-       set_prev_fb(bt, 0);
+       set_next_fb(bt, -1);
+       set_prev_fb(bt, -1);
        free_blocks = bt;
        return;
     }
@@ -163,7 +163,7 @@ static inline void add_new_fb(word_t *bt)
         //ostatni blok
         set_next_fb(block, bt - heap_start);
         set_prev_fb(bt, block - heap_start);
-        set_next_fb(bt, 0);
+        set_next_fb(bt, -1);
     }
 }
 //nie zmienia FLAGI!!!!
@@ -174,18 +174,24 @@ static inline void remove_fb(word_t *bt)
   //został tylko jeden blok na liście
   if(prev == NULL && next == NULL)
   {
-    free_blocks = NULL
+    free_blocks = NULL;
   }
+  //usun 1 blok
   else if(prev == NULL)
   {
-
+    free_blocks = next;
+    set_prev_fb(next, -1);
   }
+  //usun ostatni blok
   else if(next == NULL)
   {
-
+    set_next_fb(prev, -1);
   }
+  //usun blok pomiędzy dwoma innymi blokami
   else{
-    
+    set_next_fb(prev, next_fb(bt)- heap_start);
+    set_prev_fb(next, prev_fb(bt)- heap_start);
+
   }
 }
 /* złączenie dwóch bloków, algorytm jest wolną adaptacją kodu funkcji coalasce
@@ -279,17 +285,15 @@ int mm_init(void) {
   return 0;
 }
 
-/* --=[ malloc ]=----------------------------------------------------------- */
+/* --=[ malloc ]=----------------------------------------------------------- 
+   defakto tutaj mamy bloki posortowane już w fb od najmniejszego do największego
+   a wię przechodząc ta list po koleji 1 który nam się pojawi będzie tym porządanym
+*/
 
-#if 0
-/* First fit startegy. */
-static word_t *find_fit(size_t reqsz) {
-}
-#else
 /* Best fit startegy. */
 static word_t *find_fit(size_t reqsz) {
 }
-#endif
+
 
 void *malloc(size_t size) {
 }
@@ -301,7 +305,6 @@ void free(void *ptr) {
   if(ptr != NULL)
   {
     word_t *bt = bt_fromptr(ptr);//dostaniemy bt
-
    // size_t size = get_size(bt);
    //bt_make(bt, size, FREE);
     bt = coalesce(bt);
