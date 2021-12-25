@@ -1,5 +1,3 @@
-//okej tu będzie czysty kod, ale z komentażami co jest w funcjach
-
 #include <assert.h>
 #include <limits.h>
 #include <stdio.h>
@@ -45,7 +43,7 @@ typedef enum {
 static word_t *heap_start; /* Address of the first block */
 static word_t *heap_end;   /* Address past last byte of last block */
 static word_t *last;       /* Points at last block */
-
+static word_t *free_blocks;
 
 
 /*__Funkcje obsługujące boundary tagi czyli headera i footera__*/
@@ -145,7 +143,7 @@ static inline void add_new_fb(word_t *bt)
        return;
     }
     else{
-        word_t *block = free_block;
+        word_t *block = free_blocks;
         word_t *next_block = next_fb(block);
         word_t size = bt_size(bt);
         word_t listed_block_size = bt_size(block);
@@ -262,8 +260,12 @@ static inline word_t *coalasce(word_t *bt)
 /* --=[ miscellanous procedures ]=------------------------------------------ */
 
 /* Calculates block size incl. header, footer & payload,
- * and aligns it to block boundary (ALIGNMENT). */
-static inline size_t blksz(size_t size) {
+ * and aligns it to block boundary (ALIGNMENT).
+  korzystam z round_up
+ */
+static inline size_t normalize_size(size_t size) {
+  size += 2 * sizeof(word_t);//miejsce na footer i header 
+  return (size + ALIGNMENT - 1) & -ALIGNMENT;
 }
 
 static void *morecore(size_t size) {
@@ -282,20 +284,72 @@ int mm_init(void) {
   heap_start = NULL;
   heap_end = NULL;
   last = NULL;
+  free_blocks = NULL;
   return 0;
 }
 
 /* --=[ malloc ]=----------------------------------------------------------- 
    defakto tutaj mamy bloki posortowane już w fb od najmniejszego do największego
    a wię przechodząc ta list po koleji 1 który nam się pojawi będzie tym porządanym
+  najmniejszy<...<największy
 */
 
 /* Best fit startegy. */
 static word_t *find_fit(size_t reqsz) {
+  word_t *fb = free_blocks;
+  size_t size = bt_size(fb);
+  while(fb != NULL)
+  {
+    if(reqsz>=size)
+    {
+      return fb;
+    }
+    fb = next_fb(fb);
+    size = bt_size(fb);
+  }
+  return NULL;
+
 }
 
-
+/* 
+   Funkcja malloc jest zainspirowana kodem z książki CS:APP to znaczy, 
+   że inspirowałem się stworzonym tam algorytmem i adoptowałem go
+   do moich potrzeb.
+   
+*/
 void *malloc(size_t size) {
+  if(size == 0)
+  {
+    return NULL;
+  }
+  size = normalize_size(size);
+  size_t blocks = size / 4;
+
+  word_t *new_block;
+  if(free_blocks == NULL)
+  {
+    new_block = mem_sbrk(size);
+    last = new_block;
+    heap_end = new_block + blocks;
+    if(heap_start == 0)
+    {
+      heap_start = new_block;
+    }
+    //return new_block;
+  }
+  else{
+    new_block = find_fit(size);
+    if(new_block == NULL)
+    {
+      new_block = mem_sbrk(size);
+      last = new_block;
+      heap_end = new_block + blocks;
+    }
+  }
+  bt_make(new_block, size, USED);
+  new_block = bt_payload(new_block);
+  return new_block;
+
 }
 
 /* --=[ free ]=-------------------------------------------------------------
@@ -327,6 +381,10 @@ void *calloc(size_t nmemb, size_t size) {
   return new_ptr;
 }
 
+/* --=[ mm_checkheap ]=----------------------------------------------------- */
+
+void mm_checkheap(int verbose) {
+}
 /* --=[ mm_checkheap ]=----------------------------------------------------- */
 
 void mm_checkheap(int verbose) {
