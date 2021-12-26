@@ -254,7 +254,7 @@ static inline word_t *coalasce(word_t *bt)
   {
     printf("c");
     next = bt + (bt_size(bt)/4);
-    next_free = bt_free(next);
+    next_free = bt_free(bt);
     printf("\nbtfree: %d\n", next_free);
   }
   else{
@@ -286,7 +286,6 @@ static inline word_t *coalasce(word_t *bt)
   else if(!prev_free && next_free)
   {
     printf("g");
-    print_memory();
     remove_fb(next);
     printf("g");
     size = bt_size(bt) + bt_size(next);
@@ -352,14 +351,14 @@ static word_t *find_fit(size_t reqsz) {
   {
     if(reqsz<=size)
     {
-      printf("%ld\t %ld", reqsz, size);
+      printf("req %ld\t ten ma%ld\n", reqsz, size);
       remove_fb(fb);
       return fb;
     }
     fb = next_fb(fb);
     size = bt_size(fb)- 2*sizeof(word_t);;
   }
-  printf("tu mial byc");
+ // printf("tu mial byc");
   return NULL;
 
 }
@@ -368,23 +367,24 @@ static word_t *find_fit(size_t reqsz) {
    Funkcja malloc jest zainspirowana kodem z książki CS:APP to znaczy, 
    że inspirowałem się stworzonym tam algorytmem i adoptowałem go
    do moich potrzeb.
-
-
    NIe złącza ostatniego wolnego bloku!!!!
    
 */
 int i = 0;
 void *mm_malloc(size_t size) {
   i++;
-  if(free_blocks!= NULL)
-    printf("\nmalloc %ld free_block_size:%d\n",size,  *free_blocks);
-  else
-    printf("\nmalloc %ld\n", size);
+  //print_memory();
+  
+  
   if(size == 0)
   {
     return NULL;
   }
   size = normalize_size(size);
+  if(free_blocks!= NULL)
+    printf("\nmalloc %ld free_block_size:%d\n",size,  *free_blocks);
+  else
+    printf("\nmalloc %ld\n", size);
   size_t blocks = size / 4;
   word_t *new_block;
   if(free_blocks == NULL)
@@ -408,7 +408,7 @@ void *mm_malloc(size_t size) {
     }
     else
     {
-      printf("rozmiae bloku %d", *new_block);
+     size = bt_size(new_block);
     }
   }
   bt_make(new_block, size, USED);
@@ -421,7 +421,9 @@ void *mm_malloc(size_t size) {
     implementacj na podstawie  */
 
 void mm_free(void *ptr) {
+  //_memory();
   printf("free");
+  
   if(ptr != NULL)
   {
     word_t *bt = bt_fromptr(ptr);//dostaniemy bt
