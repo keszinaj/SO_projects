@@ -346,17 +346,26 @@ int mm_init(void) {
 /* Best fit startegy. */
 static word_t *find_fit(size_t reqsz) {
   word_t *fb = free_blocks;
-  size_t size = bt_size(fb)- 2*sizeof(word_t);
+  size_t size = bt_size(fb);
   while(fb != NULL)
   {
     if(reqsz<=size)
     {
       printf("req %ld\t ten ma%ld\n", reqsz, size);
       remove_fb(fb);
+      size_t size_diff =  size - reqsz; 
+      if(size_diff > 6* sizeof(word_t))
+      {
+        printf("tu %ld - %ld",size, reqsz);
+        word_t *new_fb = fb + (reqsz/4);
+        bt_make(fb, reqsz, USED);
+        bt_make(new_fb, size_diff, FREE);
+        add_new_fb(new_fb); 
+      }
       return fb;
     }
     fb = next_fb(fb);
-    size = bt_size(fb)- 2*sizeof(word_t);;
+    size = bt_size(fb);
   }
  // printf("tu mial byc");
   return NULL;
