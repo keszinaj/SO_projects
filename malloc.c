@@ -111,43 +111,12 @@ static inline word_t *next_fb(word_t *bt) {
 /* zwraca null lub wskaźnik na poprzedni blok pamięci */
 static inline word_t *prev_fb(word_t *bt) {
     word_t offset = *(bt + 1);
+   // printf("%d", offset);
     if(offset == -1)
         return NULL;
     return heap_start + offset ;
 }
-void print_memory()
-{
-  printf("printed debug info");
-  if(heap_start == NULL)
-  {
-    printf("empty memory");
-    return;
-  }
-  word_t *block = heap_start;
- 
-  word_t size;
-  int free;
-  int index_next;
-  int index_prev;
-  printf("heap start: %ls\t, heap end: %ls\n", heap_start, heap_end);
-  while(block!=heap_end)
-  {
-    size = bt_size(block);
-    free = bt_free(block);
-    if(free)
-    {
-      index_prev= *(block + 1);
-      index_next = *(block + 2);
-      printf("F: %d, %d, %d\n", size, index_prev, index_next);
-    }
-    else{
-      printf("Z: %d\n", size);
-    }
-    block = block + (size /4);
-    
 
-  }
-}
 static inline void set_new_fb(word_t *bt, word_t *next)
 {
    word_t *prev = prev_fb(next); 
@@ -173,7 +142,7 @@ static inline void add_new_fb(word_t *bt)
        set_next_fb(bt, -1);
        set_prev_fb(bt, -1);
        free_blocks = bt;
-       printf("ijk %d", *free_blocks);
+       //f("ijk %d", *free_blocks);
        return;
     }
     else{
@@ -207,21 +176,25 @@ static inline void remove_fb(word_t *bt)
   //został tylko jeden blok na liście
   if(prev == NULL && next == NULL)
   {
+    //printf("samotny1");
     free_blocks = NULL;
   }
   //usun 1 blok
   else if(prev == NULL)
   {
+   //printf("samotny2");
     free_blocks = next;
     set_prev_fb(next, -1);
   }
   //usun ostatni blok
   else if(next == NULL)
   {
+    //printf("samotny3");
     set_next_fb(prev, -1);
   }
   //usun blok pomiędzy dwoma innymi blokami
   else{
+   // printf("samotny4");
     set_next_fb(prev, next_fb(bt)- heap_start);
     set_prev_fb(next, prev_fb(bt)- heap_start);
 
@@ -239,32 +212,34 @@ static inline word_t *coalasce(word_t *bt)
   word_t size;
   if(bt != heap_start )
   {
-    printf("a");
-    prev = bt - (bt_size(bt - 1)/4);
-    printf("a");
+    //printf("a");
+    prev = bt - 1;
+    //printf("a");
     prev_free = bt_free(prev);
-    printf("a");
+    prev = bt - (bt_size(prev)/4);
+   // printf("prev_free %d", prev_free);
   }
   else
   {
-    printf("b");
+   // printf("b");
     prev_free = 0;
   }
-  if(bt != last)
+  next = bt  + (bt_size(bt)/4);
+  if(next < heap_end)
   {
-    printf("c");
-    next = bt + (bt_size(bt)/4);
-    next_free = bt_free(bt);
-    printf("\nbtfree: %d\n", next_free);
+    //printf("c");
+    //next = bt  + (bt_size(bt)/4);
+    next_free = bt_free(next);
+    //printf("\nnext free: %d\n", next_free);
   }
   else{
-    printf("d");
+  //  printf("d");
     next_free = 0;
   }
   //okalające bloki są wolne
   if(next_free && prev_free)
   {
-    printf("e");
+  //  printf("e");
     remove_fb(prev);
     remove_fb(next);
     size = bt_size(prev) + bt_size(bt) + bt_size(next);
@@ -275,7 +250,8 @@ static inline word_t *coalasce(word_t *bt)
   //poprzedni blok jest wolny
   else if(prev_free && !next_free)
   {
-    printf("f");
+    //printf("f");
+    //prev = bt - (bt_size(prev)/4);
     remove_fb(prev);
     size = bt_size(prev) + bt_size(bt);
     bt = prev;
@@ -285,16 +261,18 @@ static inline word_t *coalasce(word_t *bt)
   //następny blok jest wolny
   else if(!prev_free && next_free)
   {
-    printf("g");
+    //printf("g");
+    //mm_checkheap(1);
+   // printf("\n%d\n", (bt_size(bt)/4));
     remove_fb(next);
-    printf("g");
+    //printf("g");
     size = bt_size(bt) + bt_size(next);
     bt_make(bt, size, FREE);
     add_new_fb(bt);
   }
   //bloki z przodu i tyłu są zajęte
   else{
-    printf("h");
+   // printf("h");
     size = bt_size(bt);
     bt_make(bt, size, FREE);
     add_new_fb(bt);
@@ -346,17 +324,18 @@ int mm_init(void) {
 /* Best fit startegy. */
 static word_t *find_fit(size_t reqsz) {
   word_t *fb = free_blocks;
+  //word_t *prev = fb;
   size_t size = bt_size(fb);
   while(fb != NULL)
   {
     if(reqsz<=size)
     {
-      printf("req %ld\t ten ma%ld\n", reqsz, size);
+     // printf("req %ld\t ten ma%ld\n", reqsz, size);
       remove_fb(fb);
       size_t size_diff =  size - reqsz; 
       if(size_diff > 6* sizeof(word_t))
       {
-        printf("tu %ld - %ld",size, reqsz);
+       // printf("tu %ld - %ld",size, reqsz);
         word_t *new_fb = fb + (reqsz/4);
         bt_make(fb, reqsz, USED);
         bt_make(new_fb, size_diff, FREE);
@@ -364,9 +343,14 @@ static word_t *find_fit(size_t reqsz) {
       }
       return fb;
     }
+   // prev = fb;
     fb = next_fb(fb);
     size = bt_size(fb);
   }
+  //if(prev + (bt_size(prev)/4) == heap_end)
+  //{
+  //  return prev;
+  //}
  // printf("tu mial byc");
   return NULL;
 
@@ -379,21 +363,21 @@ static word_t *find_fit(size_t reqsz) {
    NIe złącza ostatniego wolnego bloku!!!!
    
 */
-int i = 0;
+//int i = 0;
 void *mm_malloc(size_t size) {
-  i++;
+ // i++;
   //print_memory();
-  
-  
+ // printf("malloc\n");
+  //mm_checkheap(1);
   if(size == 0)
   {
     return NULL;
   }
   size = normalize_size(size);
-  if(free_blocks!= NULL)
-    printf("\nmalloc %ld free_block_size:%d\n",size,  *free_blocks);
-  else
-    printf("\nmalloc %ld\n", size);
+  //if(free_blocks!= NULL)
+   // printf("\nmalloc %ld free_block_size:%d\n",size,  *free_blocks);
+  //else
+  //  printf("\nmalloc %ld\n", size);
   size_t blocks = size / 4;
   word_t *new_block;
   if(free_blocks == NULL)
@@ -417,9 +401,11 @@ void *mm_malloc(size_t size) {
     }
     else
     {
-     size = bt_size(new_block);
+      size = bt_size(new_block);
+      //  size = block_size;
+      }
     }
-  }
+  
   bt_make(new_block, size, USED);
   new_block = bt_payload(new_block);
   return new_block;
@@ -431,7 +417,7 @@ void *mm_malloc(size_t size) {
 
 void mm_free(void *ptr) {
   //_memory();
-  printf("free");
+ // printf("free\n");
   
   if(ptr != NULL)
   {
@@ -443,17 +429,41 @@ void mm_free(void *ptr) {
 
 }
 
-/* --=[ realloc ]=---------------------------------------------------------- */
+/* --=[ realloc ]=---------------------------------------------------------- 
+  implementacja na podstawie dokumentacji funkcji z so21_projekt_malloc_v0.pdf*/
 
 void *mm_realloc(void *old_ptr, size_t size) {
-  printf("realloc");
-  return NULL;
+   //printf("realloc");
+  //jeśli ptr == NULL, to wywołanie jest tożsame z «mm_malloc(size)»,
+  if(old_ptr == NULL)
+  {
+    return mm_malloc(size);
+  }
+  //jeśli «size» jest równy 0, to wywołanie jest tożsame z «mm_free(ptr)»,
+  if(size == 0)
+  {
+    mm_free(old_ptr);
+    return NULL;
+  }
+  //wpp
+  word_t *bt = bt_fromptr(old_ptr);
+  size_t size_bt = bt_size(bt);
+  if(size_bt > size)
+  {
+    size_bt = size;
+  }
+  void *new = mm_malloc(size);
+  memcpy(new, old_ptr, size_bt);
+  free(old_ptr);
+  return new;
+  //return NULL;
 }
 
-/* --=[ calloc ]=----------------------------------------------------------- */
+/* --=[ calloc ]=----------------------------------------------------------- 
+    z mm-implicit.c nic nie zmieniłem*/
 
 void *mm_calloc(size_t nmemb, size_t size) {
-  printf("calloc");
+ // printf("calloc");
   size_t bytes = nmemb * size;
   void *new_ptr = malloc(bytes);
   if (new_ptr)
@@ -461,7 +471,102 @@ void *mm_calloc(size_t nmemb, size_t size) {
   return new_ptr;
 }
 
-/* --=[ mm_checkheap ]=----------------------------------------------------- */
+/* --=[ mm_checkheap ]=----------------------------------------------------- 
+   Błędy:
+   1 - wolny blok nie jest znaczony jako wolny blok
+   2  - wskaźniki na poprzedni i następny blok wskazują poza zaalokowaną sterte
+   3 - występują dwa wolne bloki obok siebie
+   4 - nie wszystkie wolne bloki są na liście wolnych bloków
+   */
 
 void mm_checkheap(int verbose) {
+  int error = 0;
+  int error_num = -1;
+  //sprawdzam czy wszytkie bloki na wolnej liście są ustawione jako wolne
+  int count_free_block = 0;
+  word_t *block = free_blocks;
+  word_t *next;
+  word_t *prev;
+  while(block != NULL)
+  {
+    count_free_block++;
+    if(bt_used(block))
+    {
+      error = 1;
+      error_num = 1;
+    }
+    next = next_fb(block);
+    prev = prev_fb(block);
+    if(!(next == NULL || next < heap_end))
+    {
+      error = 1;
+      error_num = 2;
+    }
+    if(!(prev == NULL || prev >= heap_start))
+    {
+      error = 1;
+      error_num = 2;
+    }
+    block = next;
+  }
+  block = heap_start;
+  while(block!=heap_end)
+  {
+    next = block + (bt_size(block)/4);
+    if(bt_free(block))    
+    {
+      if(bt_free(next) && next!=heap_end)
+      {
+        error = 1;
+        error_num = 3;
+      }
+      count_free_block--;
+     
+    }
+    block = next;
+  }
+  if(count_free_block != 0)
+  {
+    error = 1;
+    error_num = 4;
+  }
+  if(verbose != 0)
+  {
+  printf("printed debug info\n");
+  if(heap_start == NULL)
+  {
+    printf("empty memory");
+    return;
+  }
+  block = heap_start;
+ 
+  word_t size;
+  int free;
+  int index_next;
+  int index_prev;
+  printf("heap start: %ls\t, heap end: %ls\n", heap_start, heap_end);
+  while(block!=heap_end)
+  {
+    size = bt_size(block);
+    free = bt_free(block);
+    if(free)
+    {
+      index_prev= *(block + 1);
+      index_next = *(block + 2);
+      printf("\nF: %d, %d, %d\n", size, index_prev, index_next);
+    }
+    else{
+      printf("Z: %d", size);
+    }
+    block = block + (size /4);
+    
+
+  }
+
+}
+  if(error)
+  {
+    printf("\n%d\n", error_num);
+    exit(error_num);
+  }
 }
