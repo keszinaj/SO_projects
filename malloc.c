@@ -422,7 +422,7 @@ void *mm_malloc(size_t size) {
 
 void mm_free(void *ptr) {
   //_memory();
- //printf("free\n");
+  //printf("free\n");
   
   if(ptr != NULL)
   {
@@ -453,13 +453,32 @@ void *mm_realloc(void *old_ptr, size_t size) {
   //wpp
   word_t *bt = bt_fromptr(old_ptr);
   size_t size_bt = bt_size(bt);
-  if(size_bt > size)
+  //jeżeli zmniejszamy blok to po prost oddajemy stary blok
+  if(size_bt - 2*(sizeof(word_t))  >= size)
   {
-    size_bt = size;
+    return old_ptr;
   }
+  //gdy trzeba powiększyć
+  word_t *next = bt + bt_size(bt)/4;
+   //printf("aaaaaaaaa");
+  if(next < heap_end && bt_free(next))
+  {
+    size_t size_next = bt_size(next);
+    if(size_next + size_bt - (2*sizeof(word_t)) >= size)
+    {
+      //mm_checkheap(1);
+      //printf("%ld\n", size);
+      remove_fb(next);
+     // printf("aaaaaaaaa");
+      bt_make(bt, size_next + size_bt, USED);
+      return bt_payload(bt);
+    }
+  }
+ // printf("a");
   void *new = mm_malloc(size);
-  memcpy(new, old_ptr, size_bt);
-  free(old_ptr);
+
+  memcpy(new , old_ptr, size_bt);
+   free(old_ptr);
   return new;
   //return NULL;
 }
@@ -575,3 +594,4 @@ void mm_checkheap(int verbose) {
     exit(error_num);
   }
 }
+
