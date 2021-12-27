@@ -505,9 +505,21 @@ void *mm_realloc(void *old_ptr, size_t size) {
     }
       
     }*/
-  
+  }
+  /* z tym wychodzą o 0.2 gorsze wyniki więc nie dodam
+  if(bt+size_bt/4  == heap_end)
+  {
+    
+    size_t size_diff = size - size_bt;
+    size_diff= normalize_size(size_diff);
+    mem_sbrk(size_diff);
+   //printf("aaa\n");
+    heap_end = heap_end + (size_diff / 4);
+    bt_make(bt,size_bt + size_diff , USED);
+    return bt_payload(bt);
 
   }
+  */
  // printf("a");
   void *new = mm_malloc(size);
 
