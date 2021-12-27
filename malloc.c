@@ -324,7 +324,7 @@ int mm_init(void) {
 /* Best fit startegy. */
 static word_t *find_fit(size_t reqsz) {
   word_t *fb = free_blocks;
-  //word_t *prev = fb;
+  word_t *prev = NULL;
   size_t size = bt_size(fb);
   while(fb != NULL)
   {
@@ -343,15 +343,20 @@ static word_t *find_fit(size_t reqsz) {
       }
       return fb;
     }
-   // prev = fb;
+    prev = fb;
     fb = next_fb(fb);
     size = bt_size(fb);
   }
-  //if(prev + (bt_size(prev)/4) == heap_end)
-  //{
-  //  return prev;
-  //}
- // printf("tu mial byc");
+  if((prev != NULL) && (prev + (bt_size(prev) / 4) >= heap_end))
+  {
+    remove_fb(prev);
+    word_t size_diff = reqsz - bt_size(prev);
+    mem_sbrk(size_diff);
+    last = prev;
+    heap_end = heap_end + (size_diff / 4);
+    bt_make(prev, reqsz, FREE);
+    return prev;
+  }
   return NULL;
 
 }
@@ -417,7 +422,7 @@ void *mm_malloc(size_t size) {
 
 void mm_free(void *ptr) {
   //_memory();
- // printf("free\n");
+ //printf("free\n");
   
   if(ptr != NULL)
   {
