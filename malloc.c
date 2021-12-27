@@ -461,9 +461,10 @@ void *mm_realloc(void *old_ptr, size_t size) {
   //gdy trzeba powiększyć
   word_t *next = bt + bt_size(bt)/4;
    //printf("aaaaaaaaa");
+   size_t size_next = 0;
   if(next < heap_end && bt_free(next))
   {
-    size_t size_next = bt_size(next);
+    size_next = bt_size(next);
     if(size_next + size_bt - (2*sizeof(word_t)) >= size)
     {
       //mm_checkheap(1);
@@ -473,6 +474,39 @@ void *mm_realloc(void *old_ptr, size_t size) {
       bt_make(bt, size_next + size_bt, USED);
       return bt_payload(bt);
     }
+  }
+  word_t *prev = bt - bt_size(bt-1)/4;
+  if(prev>= heap_start && bt_free(prev))
+  {
+    size_t prev_size = bt_size(prev);
+    if(prev_size + size_bt - (2*sizeof(word_t)) >= size)
+    {
+      //mm_checkheap(1);
+      //printf("%ld\n", prev_size);
+      remove_fb(prev);
+     // printf("aaaaaaaaa");
+      memcpy(prev + 1 , old_ptr, size_bt);
+      bt_make(prev, prev_size + size_bt, USED);
+      return bt_payload(prev);
+    }
+    /* kurde nie mam tego gdzie przetestowac moze lepiej usune bo to moze byc zle
+    else if(next < heap_end && bt_free(next))
+    {
+      if(prev_size + size_bt + size_next - (2*sizeof(word_t)) >= size)
+    {
+      //mm_checkheap(1);
+      printf("\naaaaaaaaaaaaaaaa%ld\n", prev_size);
+      remove_fb(prev);
+      remove_fb(next);
+     // printf("aaaaaaaaa");
+      memcpy(prev + 1 , old_ptr, size_bt);
+      bt_make(prev, prev_size + size_bt+size_next, USED);
+      return bt_payload(prev);
+    }
+      
+    }*/
+  
+
   }
  // printf("a");
   void *new = mm_malloc(size);
@@ -594,4 +628,3 @@ void mm_checkheap(int verbose) {
     exit(error_num);
   }
 }
-
