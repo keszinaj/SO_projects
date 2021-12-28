@@ -1,0 +1,219 @@
+# callgrind format
+version: 1
+creator: callgrind-3.15.0
+pid: 31005
+cmd:  ./mdriver -f traces/coalescing.rep
+part: 1
+
+
+desc: I1 cache: 
+desc: D1 cache: 
+desc: LL cache: 
+
+desc: Timerange: Basic block 0 - 124958674
+desc: Trigger: Program termination
+
+positions: line
+events: Ir
+summary: 2289426
+
+
+ob=(1) /usr/lib/x86_64-linux-gnu/ld-2.31.so
+fl=(1) ???
+fn=(0) 0x0000000000001100
+cob=(5) /home/keszinaj/university/computersciense/sem3/SO/projekty/SO_projects/malloc-keszinaj/mdriver
+cfi=(112) ???
+cfn=(350) _start
+calls=1 0 
+0 2289426
+
+ob=(5)
+fl=(145) /home/keszinaj/university/computersciense/sem3/SO/projekty/SO_projects/malloc-keszinaj/memlib.c
+fn=(612) mem_sbrk
+55 6
++1 6
++2 30
++6 6
++2 6
+
+fl=(112)
+fn=(350)
+cob=(3) /usr/lib/x86_64-linux-gnu/libc-2.31.so
+cfi=(113) /build/glibc-eX1tMB/glibc-2.31/csu/../csu/libc-start.c
+cfn=(352) (below main)
+calls=1 137 
+0 2289426
+
+fl=(119) /home/keszinaj/university/computersciense/sem3/SO/projekty/SO_projects/malloc-keszinaj/mdriver.c
+fn=(630) fsecs
+cfn=(636) eval_mm_speed
+calls=1 819 
+189 763142
+
+fn=(378) main
+cfi=(164) /home/keszinaj/university/computersciense/sem3/SO/projekty/SO_projects/malloc-keszinaj/mm.c
+cfn=(624) mm_free
+calls=7200 438 
+715 307200
+cfi=(164)
+cfn=(614) mm_malloc
+calls=7200 333 
+650 455942
+cfi=(164)
+cfn=(624)
+calls=7200 438 
+795 307200
+cfi=(164)
+cfn=(614)
+calls=7200 333 
+759 455942
+cfn=(630)
+calls=1 184 
+219 763142
+
+fn=(636)
+cfi=(164)
+cfn=(624)
+calls=7200 438 
+858 307200
+cfi=(164)
+cfn=(614)
+calls=7200 333 
+837 455942
+
+fl=(164)
+fn=(614)
+333 21600
++2 43200
++7 21600
+-9 21600
+129 43200
+342 43200
+-60 64782
+79 21594
++78 43188
+303 21594
+-1 21594
+79 21594
+301 21594
++4 21594
++5 7197
+-4 57585
+154 28794
++1 28794
+318 28794
+162 21594
++1 64782
+-8 43188
++73 21594
++1 64782
+79 43188
+250 64782
++72 21594
++2 43188
+79 21594
+357 21594
+109 21594
+-30 21594
++30 21594
+-30 21594
++16 21594
++17 21594
+365 64782
+109 6
+-30 6
++30 6
+-30 6
++16 6
++17 6
+365 18
+133 12
+cfi=(145)
+cfn=(612)
+calls=6 -78 
+* 54
++1 18
+345 6
++1 6
+-1 6
++1 6
++1 21597
+-22 7197
+109 7197
+-30 7197
++30 7197
+-30 7197
++16 7197
++17 7197
+-17 7197
++14 7197
++3 7197
++92 14394
+-29 7197
++33 14394
+-1 7197
++2 21591
+
+fn=(626) coalasce
+388 21600
+-8 21600
++8 43200
++2 7200
++1 28800
+79 14400
+391 43200
+79 14400
+395 36000
++1 14400
++16 14400
+162 7200
++1 21600
+-84 28800
+395 72000
++1 28800
++1 7200
+-4 28800
++27 21600
++9 14400
+109 14400
++3 14400
++92 43200
+436 64800
+175 14400
++33 14400
+-1 14400
++1 14400
++1 14400
++19 7200
++22 14400
+-21 7200
++21 14400
+414 7200
++2 7200
+109 7200
++3 7200
++63 7200
++32 7200
++1 7200
++1 7200
+-54 14400
+
+fn=(624)
+438 21600
++2 43200
+100 21600
+443 21600
+cfn=(626)
+calls=21600 -55 
+* 813600
+
+ob=(3)
+fl=(113)
+fn=(352)
+cob=(5)
+cfi=(119)
+cfn=(378)
+calls=1 231 
+308 2289426
+
+totals: 2289426
