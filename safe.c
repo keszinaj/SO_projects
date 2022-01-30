@@ -396,24 +396,35 @@ int ext2_read(uint32_t ino, void *data, size_t pos, size_t len) {
 int ext2_readdir(uint32_t ino, uint32_t *off_p, ext2_dirent_t *de) {
 //#ifdef STUDENT
   /* TODO */
-  (void)ino;
-  (void)off_p;
-  (void)de;
   ext2_inode_t inode;
-  if(ext2_inode_read(ino, &inode)!= 0)
+  ext2_inode_read(ino, &inode);
+  if (inode.i_size <= *off_p) {
+      return 0;
+    }
+  ext2_read(ino, de, *off_p, de_name_offset);
+  ext2_read(ino, de->de_name, *off_p + de_name_offset, de->de_namelen);
+  de->de_name[de->de_namelen] = '\0';
+  *off_p += de->de_reclen;
+  if(de->de_ino >0)
   {
-    return 0;//chyb lepiej panic
-  }
-  //może panic jak to nie jest directory????
-  //tutaj niby while, ale ja nie do końca kumam why??
-  if(*off_p < inode.i_size)
-  {
-    ext2_read(ino, de, *off_p, de_name_offset);
-    ext2_read(ino, de->de_name, *off_p + de_name_offset, de->de_namelen);
-    de->de_name[de->de_namelen] = '\0';
-    *off_p += de->de_reclen;
+   // printf("\n%d,\t%d\n",de->de_ino, ino);
     return 1;
   }
+  //gdy są fake directory
+  while (de->de_ino == 0)
+  {
+    if (inode.i_size <= *off_p) {
+      return 0;
+    }
+    ext2_read(ino, de, *off_p, de_name_offset);
+    ext2_read(ino, de->de_name, *off_p + de_name_offset, de->de_namelen);
+    *off_p += de->de_reclen;
+
+  }
+ // printf("\n%d,\t%d\n",de->de_ino, ino);
+  de->de_name[de->de_namelen] = '\0';
+  return 1;
+  /* TODO DONE */
 //#endif /* !STUDENT */
   return 0;
 }
