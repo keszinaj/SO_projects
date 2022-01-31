@@ -1,3 +1,11 @@
+/*
+ * Oświadczam, że zapoznałem(-am) się z regulaminem prowadzenia zajęć
+ * i jestem świadomy(-a) konsekwencji niestosowania się do podanych tam zasad.
+ */
+#ifdef STUDENT
+/* Imię i nazwisko, numer indeksu: Maksymilian Debeściak, 123456 */
+#endif
+
 #include <assert.h>
 #include <ctype.h>
 #include <errno.h>
@@ -119,7 +127,7 @@ static blk_t *blk_alloc(void) {
   if (!TAILQ_EMPTY(&freelst)) {
 #ifdef STUDENT
     /* TODO */
-    //przydzielenie pierwszego wolnego bloku z list wolnych bloków
+    // przydielenie wolnego bloku z listy pustych bloków
     blk = TAILQ_FIRST(&freelst);
     TAILQ_REMOVE(&freelst, blk, b_link);
 #endif /* !STUDENT */
@@ -131,12 +139,14 @@ static blk_t *blk_alloc(void) {
   if (!TAILQ_EMPTY(&lrulst)) {
 #ifdef STUDENT
     /* TODO */
-    //przydzielenie pierwszego bloku z listy kiedyś używanych bloków
+    // przydzielenie pierwszego bloku z listy kiedyś używanych bloków
     //(które teraz zawierają niepotrzebne informacje, nadpiszemy je)
     blk = TAILQ_FIRST(&lrulst);
     TAILQ_REMOVE(&lrulst, blk, b_link);
-    //jeszcze z kubełków trzeba wywalic bo tam też jest trzymane informache o valid blokach
+    // jeszcze z kubełków trzeba wywalic bo tam też jest trzymane informache o
+    // valid blokach i psuje to zabawe
     TAILQ_REMOVE(&buckets[BUCKET(blk->b_inode, blk->b_index)], blk, b_hash);
+
 #endif /* !STUDENT */
     return blk;
   }
@@ -154,19 +164,18 @@ static blk_t *blk_get(uint32_t ino, uint32_t idx) {
   blk_t *blk = NULL;
 
   /* Locate a block in the buffer and return it if found. */
-//#ifdef STUDENT
+#ifdef STUDENT
   /* TODO */
-  //po prostu przejdziemy przez wszystkie
+  // po prostu przejdziemy przez wszystkie i go poszukamy, szybciej chyba się
+  // tego nie da zrobić
   blk = TAILQ_FIRST(bucket);
-  while (blk != NULL)
-  {
+  while (blk != NULL) {
     if (blk->b_inode == ino && blk->b_index == idx) {
       return blk;
     }
     blk = TAILQ_NEXT(blk, b_hash);
   }
-  
-//#endif /* !STUDENT */
+#endif /* !STUDENT */
 
   long blkaddr = ext2_blkaddr_read(ino, idx);
   debug("ext2_blkaddr_read(%d, %d) -> %ld\n", ino, idx, blkaddr);
@@ -212,25 +221,25 @@ int ext2_block_used(uint32_t blkaddr) {
   if (blkaddr >= block_count)
     return EINVAL;
   int used = 0;
-//#ifdef STUDENT
+#ifdef STUDENT
   /* TODO */
-  size_t group_number = (blkaddr - 1)/ blocks_per_group;
-  //patrz: https://www.nongnu.org/ext2-doc/ext2.html#bg-block-bitmap
+  size_t group_number = (blkaddr - 1) / blocks_per_group;
+  // patrz: https://www.nongnu.org/ext2-doc/ext2.html#bg-block-bitmap
   size_t bitmap_block = group_desc[group_number].gd_b_bitmap;
-  //printf("\n\n%ld\n\n", bitmap_block);
-  //patrz http://www.science.smith.edu/~nhowe/teaching/csc262/oldlabs/ext2.html#bitmap
+  // printf("\n\n%ld\n\n", bitmap_block);
   blk_t *blk = blk_get(0, bitmap_block);
+  /* bitmapa zawsze będzie wielkości 8*n, może być bardzo duża,
+     a więc najprostrzym i najbespieczniejszym sposobem
+     znajdowane zapalonych bitów będzie operowanie tylko na bajtach(tylko na
+     fragmentach tej tablicy)*/
   uint8_t light_bit = 1 << (((blkaddr - 1) % blocks_per_group) % 8);
-  if((light_bit & *((uint8_t *)(blk->b_data + ((blkaddr - 1) % blocks_per_group) / 8))) > 0)
-  {
+  if ((light_bit &
+       *((uint8_t *)(blk->b_data + ((blkaddr - 1) % blocks_per_group) / 8))) >
+      0) {
     used = 1;
   }
-  //size_t b_inGroup = (blkaddr - 1) % blocks_per_group;
-  //used = ((*((uint8_t *)(blk->b_data + b_inGroup / 8))) >> (b_inGroup % 8)) & 1;
- 
-  blk_put(blk); //odkładamy
-
-//#endif /* !STUDENT */
+  blk_put(blk); // odkładamy
+#endif          /* !STUDENT */
   return used;
 }
 
@@ -240,10 +249,12 @@ int ext2_inode_used(uint32_t ino) {
   if (!ino || ino >= inode_count)
     return EINVAL;
   int used = 0;
-//#ifdef STUDENT
+#ifdef STUDENT
   /* TODO */
-  //fragment kodu z https://www.nongnu.org/ext2-doc/ext2.html#idm140660447281728
-   size_t block_group = (ino - 1) / inodes_per_group;
+  // kod inspirowany:
+  // https://www.nongnu.org/ext2-doc/ext2.html#idm140660447281728 metoda
+  // analogiczna do tej użytej w ext2_block_used, więc nie powtarzam komentarzy
+  size_t block_group = (ino - 1) / inodes_per_group;
 
   size_t local_inode_index = (ino - 1) % inodes_per_group;
 
@@ -251,35 +262,30 @@ int ext2_inode_used(uint32_t ino) {
   blk_t *blk = blk_get(0, bitmap_block);
   uint8_t light_bit = 1 << (local_inode_index % 8);
 
-  if((light_bit & *((uint8_t *)(blk->b_data + local_inode_index/8))) > 0)
-  {
+  if ((light_bit & *((uint8_t *)(blk->b_data + local_inode_index / 8))) > 0) {
     used = 1;
   }
   blk_put(blk);
-//#endif /* !STUDENT */
+#endif /* !STUDENT */
   return used;
 }
 
 /* Reads i-node identified by number `ino`.
  * Returns 0 on success. If i-node is not allocated returns ENOENT. */
 static int ext2_inode_read(off_t ino, ext2_inode_t *inode) {
-//#ifdef STUDENT
+#ifdef STUDENT
   /* TODO */
-  //ino to numer inoda
-  //inode to "pusta" struktura gdzie mam zapisac informacje o tym inoddzi
-  if(ext2_inode_used(ino) != 1)
-  {
+  // ino to numer inoda
+  // inode to "pusta" struktura gdzie mam zapisac informacje o tym inoddzi
+  if (ext2_inode_used(ino) != 1) {
     return ENONET;
   }
   size_t block_group = (ino - 1) / inodes_per_group;
   size_t local_inode_index = (ino - 1) % inodes_per_group;
   uint32_t arr = group_desc[block_group].gd_i_tables;
-  size_t offset = local_inode_index *sizeof(ext2_inode_t);
-  ext2_read(0, inode,
-            offset + BLKSIZE * arr,
-            sizeof(ext2_inode_t));
-  
-//#endif /* !STUDENT */
+  size_t offset = local_inode_index * sizeof(ext2_inode_t);
+  ext2_read(0, inode, offset + BLKSIZE * arr, sizeof(ext2_inode_t));
+#endif /* !STUDENT */
   return 0;
 }
 
@@ -289,7 +295,6 @@ static uint32_t ext2_blkptr_read(uint32_t blkaddr, uint32_t blkidx) {
   /* TODO */
   blk_t *blk = blk_get(0, blkaddr);
   uint32_t block_ptr = ((uint32_t *)blk->b_data)[blkidx];
-  //uint32_t block_ptr =(blk->b_data)[blkidx];
   blk_put(blk);
   return block_ptr;
 #endif /* !STUDENT */
@@ -308,57 +313,53 @@ long ext2_blkaddr_read(uint32_t ino, uint32_t blkidx) {
     return -1;
 
     /* Read direct pointers or pointers from indirect blocks. */
-//#ifdef STUDENT
-  /* TODO */
-  (void)ext2_blkptr_read;
-  /* 
+#ifdef STUDENT
+  /*
      W https://www.nongnu.org/ext2-doc/ext2.html czytamy
      There are pointers to the first 12 blocks which contain the file's data
-     in the inode. 
-     There is a pointer to an indirect block 
-     (which contains pointers to the next set of blocks), 
-     a pointer to a doubly-indirect block 
-     (which contains pointers to indirect blocks) and a pointer to a 
-     trebly-indirect block (which contains pointers to doubly-indirect blocks).*/
-     //int num_direct_block = 12;
-          size_t available_blocks = EXT2_NDADDR;
-     if(blkidx <  available_blocks )
-     {
-       return inode.i_blocks[blkidx];
-     }
-     // 1 level of indirect blocks
-     // BLK_POINTERS = 256
-     blkidx = blkidx - 12;
-      available_blocks  = BLK_POINTERS;
-     if(blkidx <  available_blocks )
-     {
-       return ext2_blkptr_read(inode.i_blocks[12], blkidx);
-     }
-     blkidx = blkidx - available_blocks;
-     available_blocks = BLK_POINTERS * BLK_POINTERS;
-     if(blkidx <  available_blocks )
-     {
-       //znajdujemy index bloku w bloku pośrednim na 1 poziomie
-       int first_table = blkidx/BLK_POINTERS;
-       uint32_t addres = ext2_blkptr_read(inode.i_blocks[13], first_table);
-       return ext2_blkptr_read(addres, blkidx % BLK_POINTERS);
-     }
-     blkidx = blkidx - available_blocks;
-     // 3 level of indirect blocks
-     available_blocks  = BLK_POINTERS * BLK_POINTERS * BLK_POINTERS;
-     if (blkidx < available_blocks ) {
-       //pierwszy blok pośredni
-       int first_table = blkidx/(BLK_POINTERS* BLK_POINTERS);
-       uint32_t addres = ext2_blkptr_read(inode.i_blocks[14], first_table);
-       //druki blok pośredni
-       int second_table = ext2_blkptr_read(addres , blkidx / BLK_POINTERS);
-       //trzeci blko jesteśmy w domu
-       return ext2_blkptr_read(second_table, blkidx % BLK_POINTERS);
-    
+     in the inode.
+     There is a pointer to an indirect block
+     (which contains pointers to the next set of blocks),
+     a pointer to a doubly-indirect block
+     (which contains pointers to indirect blocks) and a pointer to a
+     trebly-indirect block (which contains pointers to doubly-indirect blocks).
+
+     Robiliśmy dokładnie takie zadanie na tablicy*/
+  // int num_direct_block = 12;
+  size_t available_blocks = EXT2_NDADDR;
+  if (blkidx < available_blocks) {
+    return inode.i_blocks[blkidx];
   }
+  // 1 dodatkowy poziom
+  // BLK_POINTERS = 256
+  blkidx = blkidx - 12;
+  available_blocks = BLK_POINTERS;
+  if (blkidx < available_blocks) {
+    return ext2_blkptr_read(inode.i_blocks[12], blkidx);
+  }
+  blkidx = blkidx - available_blocks;
+  // 2 dodatkowe poziomy
+  available_blocks = BLK_POINTERS * BLK_POINTERS;
+  if (blkidx < available_blocks) {
+    // znajdujemy index bloku w bloku pośrednim na 1 poziomie
+    int first_table = blkidx / BLK_POINTERS;
+    uint32_t addres = ext2_blkptr_read(inode.i_blocks[13], first_table);
 
-
-//#endif /* !STUDENT */
+    return ext2_blkptr_read(addres, blkidx % BLK_POINTERS);
+  }
+  blkidx = blkidx - available_blocks;
+  // 3 dodatkowe poziomy
+  available_blocks = BLK_POINTERS * BLK_POINTERS * BLK_POINTERS;
+  if (blkidx < available_blocks) {
+    // pierwszy blok pośredni
+    int first_table = blkidx / (BLK_POINTERS * BLK_POINTERS);
+    uint32_t addres = ext2_blkptr_read(inode.i_blocks[14], first_table);
+    // druki blok pośredni
+    int second_table = ext2_blkptr_read(addres, blkidx / BLK_POINTERS);
+    // trzeci blokjesteśmy w domu
+    return ext2_blkptr_read(second_table, blkidx % BLK_POINTERS);
+  }
+#endif /* !STUDENT */
   return -1;
 }
 
@@ -368,39 +369,33 @@ long ext2_blkaddr_read(uint32_t ino, uint32_t blkidx) {
  *
  * WARNING: This function assumes that `ino` i-node pointer is valid! */
 int ext2_read(uint32_t ino, void *data, size_t pos, size_t len) {
-//#ifdef STUDENT
+#ifdef STUDENT
   /* TODO */
   if (ino != 0) {
     ext2_inode_t i;
     ext2_inode_read(ino, &i);
-    if (i.i_size < pos + len){
+    if (i.i_size < pos + len) {
       return EINVAL;
-
     }
   }
-  blk_t *blk ;
+  blk_t *blk;
   uint32_t blk_num = pos / BLKSIZE;
   uint32_t loaded = 0;
   uint32_t available_to_load = BLKSIZE - (pos % BLKSIZE);
   uint32_t offset = pos % BLKSIZE;
   size_t read;
 
-  while(loaded < len)
-  {
-    if(len > available_to_load)
-  {
-    read = available_to_load;
-  }
-  else{
-    read = len;
-  }
+  while (loaded < len) {
+    if (len > available_to_load) {
+      read = available_to_load;
+    } else {
+      read = len;
+    }
     blk = blk_get(ino, blk_num);
-    if(blk != BLK_ZERO)
-    {
+    if (blk != BLK_ZERO) {
       memcpy(data + loaded, blk->b_data + offset, read);
       blk_put(blk);
-    }
-    else{
+    } else {
       loaded -= read;
     }
     offset = 0;
@@ -409,8 +404,7 @@ int ext2_read(uint32_t ino, void *data, size_t pos, size_t len) {
     blk_num++;
   }
   return 0;
-
-//#endif /* !STUDENT */
+#endif /* !STUDENT */
   return EINVAL;
 }
 
@@ -422,38 +416,34 @@ int ext2_read(uint32_t ino, void *data, size_t pos, size_t len) {
 #define de_name_offset offsetof(ext2_dirent_t, de_name)
 
 int ext2_readdir(uint32_t ino, uint32_t *off_p, ext2_dirent_t *de) {
-//#ifdef STUDENT
+#ifdef STUDENT
   /* TODO */
   ext2_inode_t inode;
   ext2_inode_read(ino, &inode);
   if (inode.i_size <= *off_p) {
-      return 0;
-    }
+    return 0;
+  }
   ext2_read(ino, de, *off_p, de_name_offset);
   ext2_read(ino, de->de_name, *off_p + de_name_offset, de->de_namelen);
   de->de_name[de->de_namelen] = '\0';
   *off_p += de->de_reclen;
-  if(de->de_ino >0)
-  {
-   // printf("\n%d,\t%d\n",de->de_ino, ino);
+  if (de->de_ino > 0) {
+    // printf("\n%d,\t%d\n",de->de_ino, ino);
     return 1;
   }
-  //gdy są fake directory
-  while (de->de_ino == 0)
-  {
+  // fake directory or cos
+  while (de->de_ino == 0) {
     if (inode.i_size <= *off_p) {
       return 0;
     }
     ext2_read(ino, de, *off_p, de_name_offset);
     ext2_read(ino, de->de_name, *off_p + de_name_offset, de->de_namelen);
     *off_p += de->de_reclen;
-
   }
- // printf("\n%d,\t%d\n",de->de_ino, ino);
+  // printf("\n%d,\t%d\n",de->de_ino, ino);
   de->de_name[de->de_namelen] = '\0';
   return 1;
-  /* TODO DONE */
-//#endif /* !STUDENT */
+#endif /* !STUDENT */
   return 0;
 }
 
@@ -468,24 +458,23 @@ int ext2_readlink(uint32_t ino, char *buf, size_t buflen) {
     return error;
 
     /* Check if it's a symlink and read it. */
-//#ifdef STUDENT
+#ifdef STUDENT
   /* TODO */
-  (void)buf;
-  (void)buflen;
-  if((inode.i_mode & EXT2_IFLNK)== 0)
-  {
+  if ((inode.i_mode & EXT2_IFLNK) == 0 || inode.i_size > buflen) {
     return EINVAL;
   }
-  if(inode.i_size < EXT2_MAXSYMLINKLEN)
-  {
+  // panic("Wrong size");
+
+  // krótki
+  if (inode.i_size < EXT2_MAXSYMLINKLEN) {
     memcpy(buf, inode.i_blocks, inode.i_size);
-    //buf[inode.i_size] = '\0';
     return 0;
-  } else {
-    //buf[inode.i_size] = '\0';
+  }
+  // dłuższy
+  else {
     return ext2_read(ino, buf, 0, inode.i_size);
   }
-//#endif /* !STUDENT */
+#endif /* !STUDENT */
   return ENOTSUP;
 }
 
@@ -506,7 +495,6 @@ int ext2_stat(uint32_t ino, struct stat *st) {
   st->st_nlink = inode.i_nlink;
   st->st_uid = inode.i_uid;
   st->st_gid = inode.i_gid;
-  //st->st_rdev;		możemy sprawdzić czy to device, ale jak sprawdzić numer to nie wiem
   st->st_size = inode.i_size;
   st->st_blksize = BLKSIZE;
   st->st_blocks = inode.i_nblock;
@@ -534,44 +522,40 @@ int ext2_lookup(uint32_t ino, const char *name, uint32_t *ino_p,
   if ((error = ext2_inode_read(ino, &inode)))
     return error;
 
-//#ifdef STUDENT
+#ifdef STUDENT
   /* TODO */
   /* Tutaj jest sytuacja następująca
       name nie jest nullem ani pustym stringiem
       pod zmienną innode został wczytany inode ino */
-  (void)ino_p;
-  (void)type_p;
-  //sprawdzam czy ino jest directory
-  if((EXT2_IFDIR & inode.i_mode) == 0){
+
+  // sprawdzam czy ino jest directory
+  if ((EXT2_IFDIR & inode.i_mode) == 0) {
     return ENOTDIR;
   }
-  //przechodzimy po całym katalogu
+  // przechodzimy po całym katalogu
   uint32_t offset = 0;
   ext2_dirent_t entry;
   int available = ext2_readdir(ino, &offset, &entry);
   int name_length, entry_name_len;
-  //int n = 0;
-  while(available)
-  {
+  // int n = 0;
+  while (available) {
     name_length = strlen(name);
     entry_name_len = entry.de_namelen;
-    //dla bezpieczeństwa
-    if(name_length == entry_name_len)
-    {
-      if(strcmp(name, entry.de_name) == 0)
-      {
+    // dla bezpieczeństwa taki upośledzony dla moich potrzeb strncmp
+    if (name_length == entry_name_len) {
+      if (strcmp(name, entry.de_name) == 0) {
         *ino_p = entry.de_ino;
         *type_p = entry.de_type;
         return 0;
       }
     }
-    
-    //offset += entry.de_reclen; źto musi być ustawiane w ext2readdr(polecenie tak każe)
+
+    // offset += entry.de_reclen; Źlee musi być ustawiane w ext2readdr(polecenie
+    // tak każe)
     available = ext2_readdir(ino, &offset, &entry);
   }
-
-  //tu dochodzimy jak nic nie zostało znalezione
-//#endif /* !STUDENT */
+  // tu dochodzimy jak nic nie zostało znalezione
+#endif /* !STUDENT */
 
   return ENOENT;
 }
@@ -613,33 +597,28 @@ int ext2_mount(const char *fspath) {
 
     /* Load interesting data from superblock into global variables.
      * Read group descriptor table into memory. */
-//#ifdef STUDENT
-  /* TODO 
-  (void)inodes_per_group;
-  (void)blocks_per_group;
-  (void)group_desc_count;
-  (void)block_count;
-  (void)inode_count;
-  (void)first_data_block;
-  (void)group_desc;
-  */
-  inodes_per_group = sb.sb_ipg; 
+#ifdef STUDENT
+  /* TODO */
+  inodes_per_group = sb.sb_ipg;
   blocks_per_group = sb.sb_bpg;
   block_count = sb.sb_bcount;
-  //group_desc_count = ceil(block_count/blocks_per_group); niestety nie mogę użyć math.h
+  // group_desc_count = ceil(block_count/blocks_per_group); niestety nie mogę
+  // użyć math.h
   group_desc_count = block_count / blocks_per_group;
-  if(block_count % blocks_per_group != 0){
+  if (block_count % blocks_per_group != 0) {
     group_desc_count++;
-  } 
+  }
   inode_count = sb.sb_icount;
   first_data_block = sb.sb_first_dblock;
-  
+
   group_desc = malloc(group_desc_count * sizeof(ext2_groupdesc_t));
-  //EXT2_GDOFF ext2fs_defs.h
-  int correctness  =  ext2_read(0, group_desc,EXT2_GDOFF, sizeof(ext2_groupdesc_t) * group_desc_count);
-  if(correctness == 0)
-     return 0; 
-//#endif /* !STUDENT */
+  // EXT2_GDOFF ext2fs_defs.h
+
+  // int correctness  =  ext2_read(0, group_desc,EXT2_GDOFF,
+  // sizeof(ext2_groupdesc_t) * group_desc_count);
+  return ext2_read(0, group_desc, EXT2_GDOFF,
+                   sizeof(ext2_groupdesc_t) * group_desc_count);
+#endif /* !STUDENT */
   return ENOTSUP;
 }
 
