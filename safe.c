@@ -239,19 +239,19 @@ int ext2_inode_used(uint32_t ino) {
 //#ifdef STUDENT
   /* TODO */
   //fragment kodu z https://www.nongnu.org/ext2-doc/ext2.html#idm140660447281728
-  size_t block_group = (ino - 1) / inodes_per_group;
+   size_t block_group = (ino - 1) / inodes_per_group;
 
   size_t local_inode_index = (ino - 1) % inodes_per_group;
 
   uint32_t bitmap_block = group_desc[block_group].gd_i_bitmap;
   blk_t *blk = blk_get(0, bitmap_block);
-  uint32_t light_bit = 1 << ( local_inode_index % 32);
+  uint8_t light_bit = 1 << (local_inode_index % 8);
 
-  if((light_bit & *(uint32_t *)(blk->b_data)) > 0)
+  if((light_bit & *((uint8_t *)(blk->b_data + local_inode_index/8))) > 0)
   {
     used = 1;
   }
-  blk_put(blk); //odkładamy
+  blk_put(blk);
 //#endif /* !STUDENT */
   return used;
 }
