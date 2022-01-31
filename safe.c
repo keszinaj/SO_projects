@@ -210,16 +210,20 @@ int ext2_block_used(uint32_t blkaddr) {
   int used = 0;
 //#ifdef STUDENT
   /* TODO */
-  // blkaddr to trochę niefortunna nazwa
   size_t group_number = (blkaddr - 1)/ blocks_per_group;
   //patrz: https://www.nongnu.org/ext2-doc/ext2.html#bg-block-bitmap
   size_t bitmap_block = group_desc[group_number].gd_b_bitmap;
+  //printf("\n\n%ld\n\n", bitmap_block);
+  //patrz http://www.science.smith.edu/~nhowe/teaching/csc262/oldlabs/ext2.html#bitmap
   blk_t *blk = blk_get(0, bitmap_block);
-  uint32_t light_bit = 1 << (((blkaddr - 1) % blocks_per_group) % 32);
-  if((light_bit & *(uint32_t *)(blk->b_data)) > 0)
+  uint8_t light_bit = 1 << (((blkaddr - 1) % blocks_per_group) % 8);
+  if((light_bit & *((uint8_t *)(blk->b_data + ((blkaddr - 1) % blocks_per_group) / 8))) > 0)
   {
     used = 1;
   }
+  //size_t b_inGroup = (blkaddr - 1) % blocks_per_group;
+  //used = ((*((uint8_t *)(blk->b_data + b_inGroup / 8))) >> (b_inGroup % 8)) & 1;
+ 
   blk_put(blk); //odkładamy
 
 //#endif /* !STUDENT */
@@ -313,17 +317,18 @@ long ext2_blkaddr_read(uint32_t ino, uint32_t blkidx) {
      (which contains pointers to indirect blocks) and a pointer to a 
      trebly-indirect block (which contains pointers to doubly-indirect blocks).*/
      //int num_direct_block = 12;
-     size_t available_blocks = EXT2_NDADDR;
+          size_t available_blocks = EXT2_NDADDR;
      if(blkidx <  available_blocks )
      {
        return inode.i_blocks[blkidx];
      }
      // 1 level of indirect blocks
      // BLK_POINTERS = 256
+     blkidx = blkidx - 12;
       available_blocks  = BLK_POINTERS;
      if(blkidx <  available_blocks )
      {
-       return ext2_blkptr_read(inode.i_blocks[12], blkidx - 12);
+       return ext2_blkptr_read(inode.i_blocks[12], blkidx);
      }
      blkidx = blkidx - available_blocks;
      available_blocks = BLK_POINTERS * BLK_POINTERS;
@@ -349,7 +354,6 @@ long ext2_blkaddr_read(uint32_t ino, uint32_t blkidx) {
   }
 
 
-
 //#endif /* !STUDENT */
   return -1;
 }
@@ -362,25 +366,45 @@ long ext2_blkaddr_read(uint32_t ino, uint32_t blkidx) {
 int ext2_read(uint32_t ino, void *data, size_t pos, size_t len) {
 //#ifdef STUDENT
   /* TODO */
-  (void)ino;
-  (void)data;
-  (void)pos;
-  (void)len;
-  (void)blk_get;
-  (void)blk_put;
-  // sprawdzenie poprawności
-  ext2_inode_t info;
-  ext2_inode_read(ino, &info);
-  size_t border = info.i_size;
-  if(pos > border || pos + len > border){
-    return EINVAL;
-  }
-  int st_block = pos / BLKSIZE;
-  blk_t *block = blk_get(ino, st_block);
-  memcpy(data, block->b_data + (pos % BLKSIZE), len);
-  blk_put(block);
-  return 0;
+  if (ino != 0) {
+    ext2_inode_t i;
+    ext2_inode_read(ino, &i);
+    if (i.i_size < pos + len){
+      return EINVAL;
 
+    }
+  }
+  blk_t *blk ;
+  uint32_t blk_num = pos / BLKSIZE;
+  uint32_t loaded = 0;
+  uint32_t available_to_load = BLKSIZE - (pos % BLKSIZE);
+  uint32_t offset = pos % BLKSIZE;
+  size_t read;
+
+  while(loaded < len)
+  {
+    if(len > available_to_load)
+  {
+    read = available_to_load;
+  }
+  else{
+    read = len;
+  }
+    blk = blk_get(ino, blk_num);
+    if(blk != BLK_ZERO)
+    {
+      memcpy(data + loaded, blk->b_data + offset, read);
+      blk_put(blk);
+    }
+    else{
+      loaded -= read;
+    }
+    offset = 0;
+    loaded += read;
+    available_to_load = BLKSIZE;
+    blk_num++;
+  }
+  return 0;
 
 //#endif /* !STUDENT */
   return EINVAL;
