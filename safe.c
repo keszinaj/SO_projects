@@ -119,6 +119,7 @@ static blk_t *blk_alloc(void) {
   if (!TAILQ_EMPTY(&freelst)) {
 #ifdef STUDENT
     /* TODO */
+    //przydzielenie pierwszego wolnego bloku z list wolnych bloków
     blk = TAILQ_FIRST(&freelst);
     TAILQ_REMOVE(&freelst, blk, b_link);
 #endif /* !STUDENT */
@@ -130,9 +131,12 @@ static blk_t *blk_alloc(void) {
   if (!TAILQ_EMPTY(&lrulst)) {
 #ifdef STUDENT
     /* TODO */
-    blk = TAILQ_LAST(&lrulst, blk_list);
+    //przydzielenie pierwszego bloku z listy kiedyś używanych bloków
+    //(które teraz zawierają niepotrzebne informacje, nadpiszemy je)
+    blk = TAILQ_FIRST(&lrulst);
     TAILQ_REMOVE(&lrulst, blk, b_link);
-   // TAILQ_REMOVE(&buckets[BUCKET(blk->b_inode, blk->b_index)], blk, b_hash);
+    //jeszcze z kubełków trzeba wywalic bo tam też jest trzymane informache o valid blokach
+    TAILQ_REMOVE(&buckets[BUCKET(blk->b_inode, blk->b_index)], blk, b_hash);
 #endif /* !STUDENT */
     return blk;
   }
@@ -152,15 +156,15 @@ static blk_t *blk_get(uint32_t ino, uint32_t idx) {
   /* Locate a block in the buffer and return it if found. */
 //#ifdef STUDENT
   /* TODO */
+  //po prostu przejdziemy przez wszystkie
   blk = TAILQ_FIRST(bucket);
-  do
+  while (blk != NULL)
   {
     if (blk->b_inode == ino && blk->b_index == idx) {
-      blk->b_refcnt++;
       return blk;
     }
     blk = TAILQ_NEXT(blk, b_hash);
-  } while (blk != NULL);
+  }
   
 //#endif /* !STUDENT */
 
