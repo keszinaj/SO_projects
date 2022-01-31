@@ -501,18 +501,18 @@ int ext2_stat(uint32_t ino, struct stat *st) {
     /* Convert the metadata! */
 #ifdef STUDENT
   /* TODO */
-  //st->st_atim = inode.i_atime;
-  st->st_ctime = inode.i_ctime;
-  st->st_blksize = BLKSIZE;
-  st->st_blocks = inode.i_nblock;
-  st->st_ctim.tv_sec = inode.i_ctime;
-  st->st_gid = inode.i_gid;
   st->st_ino = ino;
   st->st_mode = inode.i_mode;
-  st->st_mtim.tv_sec = inode.i_mtime;
   st->st_nlink = inode.i_nlink;
-  st->st_size = inode.i_size;
   st->st_uid = inode.i_uid;
+  st->st_gid = inode.i_gid;
+  //st->st_rdev;		możemy sprawdzić czy to device, ale jak sprawdzić numer to nie wiem
+  st->st_size = inode.i_size;
+  st->st_blksize = BLKSIZE;
+  st->st_blocks = inode.i_nblock;
+  st->st_atim.tv_sec = inode.i_atime;
+  st->st_mtim.tv_sec = inode.i_mtime;
+  st->st_ctim.tv_sec = inode.i_ctime;
   return 0;
 #endif /* !STUDENT */
   return ENOTSUP;
