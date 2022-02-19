@@ -1,41 +1,3 @@
-/*
-   Jakub Janiszek 323659
-   Oświadczam, że jestem jedynym autorem kodu źródłowego.
-*/
-
-/*
-   Podczas pisanie inspirowałem się kodem z książki CSAPP.
-   Kod powstał na szkielecie z pliku mm-implicit.c
-*/
-
-/*
-  Ważne wybory poczas implementacji:
-  Wolne bloki
-  Wolne bloki to tablica bloków o takiej strukturze w pamięci:
-   +--------+------+------+---------+--------+
-   | Header | prev | next |  wolne  | Footer |
-   +--------+------+------+---------+--------+
-R:     4        4      4       n         4
-  * prev oraz next to offset od heap_start('dobrze wyznaczony' początek stery)
-  * next == -1 dla ostatniego bloku
-  * prev == -1 dla pierwszego bloku
-  * header oraz footer zawierają informacje o wielkości bloku
-    oraz o tym czy blok jest wolny
-  * minimalna wielkość wolnego bloku to 16bajtów
-  * wolne bloki które w pamięci leżą obok siebie są od razu łączone
-  * tablica wolnych bloków jest nie jest posegregowana
-  W ostatniej CHWILI 6h przed oddaniem kodu przez przypadek podczas debugowania,
-odkryłem że dzięki polityce nieposegregowanej tyablicy wolnej pamięci mój
-program jest o ziemie szybszy
-
-  Zajęte bloki
-  Blok zajęty wygląda tak:
-   +--------+---------+--------+
-   | Header | Payload | Footer |
-   +--------+---------+--------+
-  * header oraz footer zawierają informacje o wielkości bloku
-   oraz o tym czy blok jest wolny
-*/
 #include <assert.h>
 #include <limits.h>
 #include <stdio.h>
@@ -70,7 +32,7 @@ static word_t *heap_end;    /* Adres kończący nasze bloki*/
 static word_t *free_blocks; /* Adres pierwszego wolnego bloku */
 /* to jest złoto dzięki temu zaoszczędzamy kilka tycięcy instrukcji, */
 static size_t maybe_max_fb; /* rozmiar wolnego bloku(najczęściej największego)
-                               lub -1 tłumacze się z tego dalej*/
+                               lub -1/
 
 /*__Funkcje obsługujące boundary tagi czyli headera i footera__*/
 
@@ -175,30 +137,6 @@ static inline void set_prev_fb(word_t *bt, word_t offset) {
   *(bt + 1) = offset;
 }
 
-/* funkcja pomocnicza wsadzająca wolny blok do tablicy wolnych bloków
-   obsługuje zamiane offsetów
-
-static inline void set_new_fb(word_t *bt, word_t *next)
-{
-  word_t *prev = prev_fb(next);
-  if(prev == NULL)
-  {
-    free_blocks = bt;
-    set_prev_fb(bt, -1);
-  }
-  else{
-    set_next_fb(prev, bt - heap_start);
-    set_prev_fb(bt, prev - heap_start);
-  }
-  set_next_fb(bt, next- heap_start);
-  set_prev_fb(next, bt - heap_start);
-}
-*/
-/* dodaje nowy blok to tablicy bloków
-   Zasady:
-   - pierwszy wolny blok ma wartość prev ustaawioną na -1
-   - ostatni wolny blok ma wartość next ustawioną na -1
-*/
 static inline void add_new_fb(word_t *bt) {
   // lista wolnych bloków jest pusta
   if (free_blocks == NULL) {
@@ -283,20 +221,6 @@ static word_t *find_fit(size_t reqsz) {
     // najprawdopodobniej nie ma takiego bloku
     return NULL;
   }
-
-  /* szukamy wolnego bloku polityką best fit
-      jest ona wolniejsz od fist fit co widać w testach, ale
-      fragmentacji jest mniejsza a tego byśmy chcieli
-
-      first_fit: Weighted memory utilization: 79.5%
-                 Instructions per operation 233
-      best_fit: Weighted memory utilization: 80.5%
-                Instructions per operation:430
-
-      first fit jest 2 razy szybszy, ale troche gorzej zarządza pamięcią
-      ja postawiłem na best fita bo wole mieć
-      lepiej zarządzaną pamięć nawet kosztem
-      czasu */
   word_t *fb = free_blocks;
   size_t size = bt_size(fb);
   word_t *bestfit = NULL;
@@ -304,8 +228,20 @@ static word_t *find_fit(size_t reqsz) {
   // znajdowanie pasującego bloku
   while (fb != NULL) {
     if (reqsz < size) {
-      bestfit = fb;
-      bestsize = size;
+      if(bestsize != 0)
+      {
+        if(size<bestsize)
+        {
+          bestfit = fb;
+          bestsize = size;
+        }
+
+      }
+      else
+      {
+        bestfit = fb;
+        bestsize = size;
+      }      
     }
     if (reqsz == size) {
       bestfit = fb;
@@ -331,7 +267,6 @@ static word_t *find_fit(size_t reqsz) {
 }
 
 void *mm_malloc(size_t size) {
-  // printf("malloc\n");
   if (size == 0) {
     return NULL;
   }
@@ -444,12 +379,7 @@ void mm_free(void *ptr) {
   }
 }
 
-/* realloc
-  implementacja na podstawie dokumentacji funkcji z so21_projekt_malloc_v0.pdf
-  w 3 przypadku nie ma niektórych możliwości odnajdywania wolnego bloku
-  ponieważ ich implementacja pogorszyła końcowe
-  wyniki testów
-*/
+/* realloc */
 
 void *mm_realloc(void *old_ptr, size_t size) {
   // jeśli ptr == NULL, to wywołanie jest tożsame z mm_malloc(size)»,
@@ -491,19 +421,7 @@ void *mm_realloc(void *old_ptr, size_t size) {
       return bt_payload(prev);
     }
   }
-  /* z tym wychodzą o 0.2 gorsze wyniki więc nie dodam
-  if(bt+size_bt/ block_size  == heap_end)
-  {
 
-    size_t size_diff = size - size_bt;
-    size_diff= normalize_size(size_diff);
-    morecore(size_diff);
-   //printf("aaa\n");
-    heap_end = heap_end + (size_diff / block_size);
-    bt_make(bt,size_bt + size_diff , USED);
-    return bt_payload(bt);
-  }
-  */
   void *new = mm_malloc(size);
 
   memcpy(new, old_ptr, size_bt);
@@ -511,11 +429,9 @@ void *mm_realloc(void *old_ptr, size_t size) {
   return new;
 }
 
-/* calloc
-   funcja zaadoptowana z mm-implicit.c */
+/* calloc */
 
 void *mm_calloc(size_t nmemb, size_t size) {
-  // printf("calloc");
   size_t bytes = nmemb * size;
   void *new_ptr = malloc(bytes);
   if (new_ptr)
